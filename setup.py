@@ -72,7 +72,11 @@ class CMakeBuild(build_ext):
             cmake_args += ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={}'.format(str(Path(extdir) / "spconv"))]
             cmake_args += ['-DCMAKE_BUILD_TYPE=' + cfg]
             build_args += ['--', '-j4']
+            # build_args += ['--']
 
+        cmake_args += ['-DCUDNN_INCLUDE_DIR=/opt/cudnn/cuda-9.1/7.1/cuda/include']
+        cmake_args += ['-DCUDNN_LIBRARY=/opt/cudnn/cuda-9.1/7.1/cuda/lib64/libcudnn.so']
+            
         env = os.environ.copy()
         env['CXXFLAGS'] = '{} -DVERSION_INFO=\\"{}\\"'.format(env.get('CXXFLAGS', ''),
                                                               self.distribution.get_version())
@@ -80,6 +84,20 @@ class CMakeBuild(build_ext):
             os.makedirs(self.build_temp)
         print("|||||CMAKE ARGS|||||", cmake_args)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
+
+        # SURGECALLY REPLACE CUDA ROOT
+        build_make_file = 'build/temp.linux-x86_64-3.7/src/spconv/CMakeFiles/spconv.dir/build.make'
+        link_file = 'build/temp.linux-x86_64-3.7/src/spconv/CMakeFiles/spconv.dir/link.txt'
+        dlink_file = 'build/temp.linux-x86_64-3.7/src/spconv/CMakeFiles/spconv.dir/dlink.txt'
+
+        for file in [build_make_file, link_file, dlink_file]:
+
+            with open(file) as f:
+                newText = f.read().replace('/usr/local/cuda', '/opt/cuda/9.1')
+
+            with open(file, "w") as f:
+                f.write(newText)
+        
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 
